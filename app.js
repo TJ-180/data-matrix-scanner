@@ -20,7 +20,7 @@ function saveScan(text) {
 
     if (text === lastScannedText) {
         alert(`เคยสแกนข้อมูลนี้แล้ว!\nข้อมูล: ${text}`);
-        return false; // ไม่บันทึกซ้ำ
+        return false;
     }
 
     scannedData.push({ text, timestamp: now });
@@ -67,7 +67,7 @@ function stopScanning() {
     }
 }
 
-// โหมดถ่ายรูปแล้วสแกน (ใหม่!)
+// โหมดถ่ายรูป + detect กรอบด้วย OpenCV.js (ใหม่!)
 document.getElementById('takePhoto').addEventListener('click', () => {
     document.getElementById('photoInput').click();
 });
@@ -80,25 +80,97 @@ document.getElementById('photoInput').addEventListener('change', async (event) =
     preview.src = URL.createObjectURL(file);
     preview.style.display = 'block';
 
-    document.getElementById('result').innerHTML = '<span style="color:orange;">กำลังตรวจสอบภาพ...</span>';
+    document.getElementById('result').innerHTML = '<span style="color:orange;">กำลัง detect กรอบ Data Matrix...</span>';
 
-    const html5QrCode = new Html5Qrcode("reader"); // สร้าง instance ใหม่สำหรับสแกนภาพ
+    // สร้าง Image element เพื่อ load ภาพ
+    const img = new Image();
+    img.src = preview.src;
+    img.onload = async () => {
+        try {
+            // ใช้ OpenCV.js เพื่อ detect กรอบ
+            let src = cv.imread(img);
+            let gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+            let edges = new cv.Mat();
+            cv.Canny(gray, edges, 75, 200);
 
-    try {
-        const result = await html5QrCode.scanFile(file, false); // false = ไม่แสดง overlay
-        if (saveScan(result.trim())) {
-            document.getElementById('result').innerHTML = '<span style="color:green;">พบ Data Matrix ในภาพ!</span>';
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+            let largestContour = null;
+            let maxArea = 0;
+            for (let i = 0; i < contours.size(); ++i) {
+                let cnt = contours.get(i);
+                let approx = new cv.Mat();
+                cv.approxPolyDP(cnt, approx, 0.02 * cv.arcLength(cnt, true), true);
+                if (approx.rows === 4) { // เป็นสี่เหลี่ยม
+                    let area = cv.contourArea(cnt);
+                    if (area > maxArea && area > 1000) { // ขนาดเหมาะสม (ปรับค่าได้)
+                        maxArea = area;
+                        largestContour = cnt;
+                    }
+                }
+                approx.delete();
+            }
+
+            if (largestContour) {
+                let boundingRect = cv.boundingRect(largestContour);
+                let cropped = src.roi(boundingRect); // Crop ภาพ
+
+                // แปลง cropped Mat เป็น ImageData สำหรับ canvas
+                let canvas = document.createElement('canvas');
+                cv.imshow(canvas, cropped);
+
+                // สแกน Data Matrix จาก cropped image
+                const html5QrCode = new Html5Qrcode("reader");
+                const result = await html5QrCode.scanFile(fileFromCanvas(canvas), false);
+                if (result && saveScan(result.trim())) {
+                    document.getElementById('result').innerHTML = '<span style="color:green;">พบและสแกน Data Matrix สำเร็จ!</span>';
+                } else {
+                    document.getElementById('result').innerHTML = '<span style="color:red;">พบกรอบแต่สแกนไม่ได้ ลองถ่ายใหม่</span>';
+                }
+
+                cropped.delete();
+            } else {
+                // ถ้าไม่พบกรอบ ลองสแกนภาพทั้งใบปกติ
+                const html5QrCode = new Html5Qrcode("reader");
+                const result = await html5QrCode.scanFile(file, false);
+                if (result && saveScan(result.trim())) {
+                    document.getElementById('result').innerHTML = '<span style="color:green;">สแกนสำเร็จจากภาพทั้งใบ</span>';
+                } else {
+                    document.getElementById('result').innerHTML = '<span style="color:red;">ไม่พบ Data Matrix ในภาพ ลองซูมใกล้ขึ้น</span>';
+                }
+            }
+
+            // ล้าง memory
+            src.delete();
+            gray.delete();
+            edges.delete();
+            contours.delete();
+            hierarchy.delete();
+            if (largestContour) largestContour.delete();
+
+        } catch (err) {
+            document.getElementById('result').innerHTML = '<span style="color:red;">เกิดข้อผิดพลาด: ' + err + '</span>';
+            console.error(err);
         }
-    } catch (err) {
-        document.getElementById('result').innerHTML = '<span style="color:red;">ไม่พบ Data Matrix ในภาพนี้<br>ลองถ่ายใหม่หรือซูมให้ชัดกว่านี้</span>';
-        console.log("ไม่พบโค้ด:", err);
+    };
+
+    // ฟังก์ชันช่วย: แปลง canvas เป็น File สำหรับ scanFile
+    function fileFromCanvas(canvas) {
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(new File([blob], "cropped.png", { type: "image/png" }));
+            });
+        });
     }
 
-    // รีเซ็ต input เพื่อให้ถ่ายใหม่ได้
     event.target.value = '';
 });
 
-// ปุ่มอื่นๆ
+// ปุ่มอื่นๆ (เหมือนเดิม)
 document.getElementById('startScan').addEventListener('click', startScanning);
 document.getElementById('stopScan').addEventListener('click', stopScanning);
 
