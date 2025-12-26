@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สแกน Data Matrix และบันทึกข้อมูล</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f5f5f5; }
         h1 { color: #333; }
@@ -24,14 +25,14 @@
 </head>
 <body>
     <h1>สแกน Data Matrix และบันทึกข้อมูล</h1>
-    <p>เลือกโหมดสแกนตามความเหมาะสม</p>
+    <p>เลือกโหมดสแกนตามความเหมาะสม (โหมดถ่ายรูป detect กรอบอัตโนมัติสำหรับโค้ดเล็ก)</p>
 
     <div id="reader"></div>
     <img id="photoPreview" alt="ภาพที่ถ่าย">
 
     <button id="startScan">สแกนแบบ Real-time</button>
     <button id="stopScan" style="display:none;">หยุดสแกน</button>
-    <button id="takePhoto">ถ่ายรูปแล้วสแกน (เหมาะกับโค้ดเล็ก)</button>
+    <button id="takePhoto">ถ่ายรูปแล้วสแกน (detect กรอบ)</button>
 
     <button id="clearData">ล้างข้อมูลทั้งหมด</button>
     <button id="exportCSV">Export เป็น CSV</button>
@@ -53,6 +54,11 @@
     <!-- Input ซ่อนสำหรับถ่ายรูป -->
     <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;">
 
+    <script>
+        function onOpenCvReady() {
+            console.log('OpenCV.js พร้อมใช้งาน');
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
