@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สแกน Data Matrix และบันทึกข้อมูล</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        #reader { width: 90%; max-width: 500px; height: 400px; margin: 20px auto; border: 3px solid #007bff; border-radius: 10px; }
+        button { padding: 12px 30px; font-size: 18px; margin: 10px; border: none; border-radius: 8px; cursor: pointer; }
+        #startScan { background: #28a745; color: white; }
+        #stopScan { background: #dc3545; color: white; }
+        #clearData { background: #ffc107; color: black; }
+        #exportCSV { background: #17a2b8; color: white; }
+        table { width: 90%; max-width: 800px; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background: #007bff; color: white; }
+        #result { margin: 20px; font-size: 18px; color: green; }
+    </style>
+</head>
+<body>
+    <h1>สแกน Data Matrix และบันทึกข้อมูล</h1>
+    <p>ชี้กล้องไปที่โค้ด → บันทึกอัตโนมัติ</p>
+
+    <div id="reader"></div>
+
+    <button id="startScan">เริ่มสแกน</button>
+    <button id="stopScan" style="display:none;">หยุดสแกน</button>
+    <button id="clearData">ล้างข้อมูลทั้งหมด</button>
+    <button id="exportCSV">Export เป็น CSV</button>
+
+    <div id="result">ยังไม่มีผลลัพธ์</div>
+
+    <h2>รายการที่บันทึกไว้</h2>
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>ลำดับ</th>
+                <th>ข้อมูลจากโค้ด</th>
+                <th>เวลาที่สแกน</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script src="app.js"></script>
+</body>
+</html>
